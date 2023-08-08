@@ -7,36 +7,36 @@ class CartPole:
         self,
         num_bins,
         num_runs,
-        epsilon,
         show_every,
         learn_rate,
         discount,
         start_epsilon_decay,
         end_epsilon_decay,
+        epsilon,
         q_table=None,
     ):
         self.num_bins = num_bins
         self.num_runs = num_runs
-        self.epsilon = epsilon
         self.show_every = show_every
         self.learn_rate = learn_rate
         self.discount = discount
         self.start_epsilon_decay = start_epsilon_decay
         self.end_epsilon_decay = end_epsilon_decay
-        self.epsilon_decay_value = epsilon / (end_epsilon_decay - start_epsilon_decay)
+        self.epsilon = 1 if q_table is None else epsilon
+
         self.env = self.init_env()
-        self.bins = self.create_bins(num_bins)
-        if q_table is not None:
-            self.q_table = q_table
-        else:
-            self.q_table = self.create_q_table(num_bins)
+        self.bins = self.init_bins(num_bins)
+        self.q_table = self.init_q_table(num_bins) if q_table is None else q_table
+        self.epsilon_decay_value = self.init_epsilon_decay_value(
+            start_epsilon_decay, end_epsilon_decay, epsilon
+        )
 
     def init_env(self):
         env = gym.make("CartPole-v1", render_mode="rgb_array")
         env.reset()
         return env
 
-    def create_bins(self, num_bins):
+    def init_bins(self, num_bins):
         bins = [
             np.linspace(-4.8, 4.8, num_bins),
             np.linspace(-2, 2, num_bins),
@@ -45,13 +45,18 @@ class CartPole:
         ]
         return bins
 
-    def create_q_table(self, num_bins):
+    def init_q_table(self, num_bins):
         obs_space_size = len(self.env.observation_space.low)
         num_act = self.env.action_space.n
         q_table = np.random.uniform(
             low=0, high=1, size=([num_bins] * obs_space_size + [num_act])
         )
         return q_table
+
+    def init_epsilon_decay_value(self, start_epsilon_decay, end_epsilon_decay, epsilon):
+        threshold = end_epsilon_decay - start_epsilon_decay
+        epsilon_decay_value = epsilon / threshold
+        return epsilon_decay_value
 
     def get_discrete_state(self, state):
         state_index = []
@@ -89,7 +94,7 @@ class CartPole:
                 curr_q = self.q_table[discrete_state + (action,)]
 
                 if done and cnt < 200:
-                    reward -= 375
+                    reward -= 500
 
                 new_q = curr_q + self.learn_rate * (
                     reward + self.discount * max_future_q - curr_q
@@ -102,7 +107,7 @@ class CartPole:
             if i % (self.show_every / 10) == 0:
                 print(f"-> Epoch no.{i}")
             if self.end_epsilon_decay >= i >= self.start_epsilon_decay:
-                self.epsilon -= self.epsilon_decay_value
+                self.epsilon = self.epsilon - self.epsilon_decay_value
 
         np.save("./data/q_table.npy", self.q_table)
 
@@ -116,8 +121,7 @@ class CartPole:
 
             while not done:
                 action = np.argmax(self.q_table[discrete_state])
-                new_state, reward, done, *_ = self.env.step(action)
+                new_state, _, done, *_ = self.env.step(action)
                 discrete_state = self.get_discrete_state(new_state)
                 cnt += 1
-
             print(cnt)

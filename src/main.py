@@ -12,5 +12,5 @@ if __name__ == "__main__":
         q_table = None
 
     cart_pole = CartPole(**params, q_table=q_table)
-    cart_pole.q_learning(does_render=False)
-    cart_pole.run_simulation(runs=5)
+    # cart_pole.q_learning(does_render=False)
+    cart_pole.run_simulation(runs=1)
