@@ -1,6 +1,6 @@
 {
   "num_bins": 30,
-  "num_runs": 1000,
+  "num_runs": 10000,
   "show_every": 100,
   "learn_rate": 0.1,
   "discount": 0.99,
